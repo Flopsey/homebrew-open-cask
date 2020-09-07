@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+
+import json
+import os
+import pathlib
+import subprocess
+import sys
+
+
+brew = os.environ['HOMEBREW_BREW_FILE']
+
+p = subprocess.run([brew, '--caskroom'],
+                   capture_output=True)
+caskroom = pathlib.Path(p.stdout.decode().strip())
+
+casks = sys.argv[1:]
+p = subprocess.run([brew, 'cask', 'info', '--json=v1', *casks],
+                    capture_output=True)
+data = json.loads(p.stdout)
+
+for cask_info in data:
+    cask_dir = caskroom / cask_info['token'] / cask_info['version']
+    apps = cask_dir.glob('*.app')
+    try:
+        subprocess.run(['open', *apps],
+                       stderr=subprocess.DEVNULL, check=True)
+    except subprocess.CalledProcessError:
+        sys.exit(f"Could not find a .app for cask '{cask_info['token']}'.")
