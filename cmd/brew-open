@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+
+import json
+import os
+import pathlib
+import shutil
+import subprocess
+import sys
+
+
+brew = shutil.which('brew')
+
+p = subprocess.run([brew, '--caskroom'],
+                   capture_output=True)
+caskroom = pathlib.Path(p.stdout.decode().strip())
+
+casks = sys.argv[1:]
+p = subprocess.run([brew, 'info', '--json=v2', *casks],
+                    capture_output=True)
+casks_info = json.loads(p.stdout)['casks']
+
+for cask in casks_info:
+    cask_dir = caskroom / cask['token'] / cask['version']
+    for artifact in cask['artifacts']:
+        if type(artifact) != list:
+            continue
+        try:
+            p = subprocess.run([shutil.which('open'), *map(lambda a: str(cask_dir / a), artifact)],
+                        stderr=subprocess.DEVNULL, check=False)
+            pass
+        except subprocess.CalledProcessError:
+            sys.exit(f"Could not find a .app for cask '{cask['token']}'.")
